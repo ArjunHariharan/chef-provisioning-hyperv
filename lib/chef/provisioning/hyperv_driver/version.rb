@@ -1,6 +1,6 @@
-module Chef
+class Chef
   module Provisioning
-    module Hyperv
+    module HyperVDriver
       VERSION = "0.0.1"
     end
   end

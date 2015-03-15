@@ -1,18 +1,16 @@
 require 'chef/provisioning/driver'
-require 'hyperv/hyperv_api'
 require 'chef/provisioning/machine/windows_machine'
 require 'chef/provisioning/machine/unix_machine'
 require 'chef/provisioning/transport/winrm'
 require 'chef/provisioning/transport/ssh_transport'
 require 'chef/provisioning/convergence_strategy/install_cached'
-
+require 'chef/provisioning/hyperv_driver/version'
+require 'hyperv/hyperv_api'
 
 class Chef
   module Provisioning
     module HyperVDriver
       class Driver < Chef::Provisioning::Driver
-
-        include HyperV::API
 
         def self.from_url(url, config)
           Driver.new(driver_url, config)
