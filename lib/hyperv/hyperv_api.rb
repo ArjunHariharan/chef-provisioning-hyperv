@@ -1,18 +1,18 @@
 # Hyper-V API Library
 
 class HyperV
-  class Server
+  class Host
     def initialize(url, username, password)
       @url = url
       @username = username
       @password = password
     end
 
-    def valid_server?(url, server_id)
+    def valid_server?(server_name)
 
     end
 
-    def create_server(hostname, host_os, host_user, host_password)
+    def create_server(vm_options = {})
       # Hyper-V API should return the server-id immediately.
       # Server create process can be strated in the background.
     end

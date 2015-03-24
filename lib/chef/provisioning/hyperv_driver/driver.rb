@@ -16,12 +16,12 @@ class Chef
         # The format for driver url is hyperv:<hyperv host url>
         # Ex- hyperv:https://10.10.121.20:8080
         def self.canonicalize_url(driver_url, config)
-          hyperv, hyperv_host = driver_url.split(':', 2)
+          hyperv, hyperv_host_url = driver_url.split(':', 2)
 
           # Validate URL
           begin
-            hyperv_host = URI.parse(hyperv_host)
-            hyperv_host.to_s
+            hyperv_host_url = URI.parse(hyperv_host_url)
+            hyperv_host_url.to_s
           rescue URI::InvalidURIError => e
             Chef::Log.fatal(e.to_s)
             raise URI::InvalidURIError
@@ -34,9 +34,11 @@ class Chef
 
         def initialize(driver_url, config)
           super(driver_url, config)
-          # Use the
+
+          # Use the config object to get hyperv credentials and initialize
+          # Hyperv::Server object during initialize.
           hyerv_creds = hyperv_auth_credentials(config)
-          @server = HyperV::Server.new(
+          @hyperv_host = HyperV::Host.new(
             driver_url, hyerv_creds[:username], hyerv_creds[:password])
         end
 
@@ -44,30 +46,33 @@ class Chef
           # Handle all the validations over here
           # To-do
           # Handle the case where the machine's hardware resources have changed.
+          #
+          # machine_spec lists the current configuration of the vm.
+          # machine_options lists the desired configuration of the vm.
           # Compare machine_spec and machine_options
-          if machine_spec.reference
+
+          # Assuming the unique identifier for each VM is its name.
+          if machine_spec.name
             # Check if the hyperv server exists.
-            unless @server.valid_server?(driver_url, machine_spec.reference['server_id'])
+            unless @hyperv_host.valid_server?(machine_spec.name)
               # Server doesn't exist
-              msg = "Machine #{machine_spec.reference['server_id']} does not really exist.  Recreating ..."
+              msg = "Machine #{machine_spec.name} does not really exist.  Recreating ..."
               action_handler.perform_action msg do
-                machine_spec.reference = nil
+                machine_spec.name = nil
               end
             end
           end
 
           # Create a new server if server doesn't exist.
-          unless machine_spec.reference
-            msg = 'Creating server #{machine_spec.name} with options #{machine_options}'
+          unless machine_spec.name
+            msg = "Creating server #{machine_options.name} with "
+            msg += "options #{machine_options.vm_options}"
+
             action_handler.perform_action msg  do
               # create_server shouldn't be a blocking method.
-              server_id = create_server(machine_spec.name, machine_spec.os,
-                                        machine_spec.user, machine_spec.password)
-              machine_spec.reference = {
-                'driver_url' => driver_url,
-                'driver_version' => MyDriver::VERSION,
-                'server_id' => server_id,
-              }
+              create_server(machine_options.vm_options)
+
+              machine_spec.vm_options = machine_options.vm_options
             end
           end
         end
@@ -132,8 +137,8 @@ class Chef
         protected
 
         def hyperv_auth_credentials(config)
-          unless config.configs[0][:driver_options][:compute_options][:usrname] &&
-            config.configs[0][:driver_options][:compute_options][:password]
+          unless !!(config.configs[0][:driver_options][:compute_options][:username] &&
+            config.configs[0][:driver_options][:compute_options][:password])
 
             raise ArgumentError.new('Usename or password missing.')
           end
