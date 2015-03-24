@@ -2,7 +2,10 @@
 
 class HyperV
   class Server
-    def connect(url, username, password)
+    def initialize(url, username, password)
+      @url = url
+      @username = username
+      @password = password
     end
 
     def valid_server?(url, server_id)
@@ -36,6 +39,17 @@ class HyperV
 
     def power_off(server_id)
 
+    end
+
+    private
+
+    def connection
+      unless @connection
+        # Make http connection with hyperv server.
+        # @connection = New connection object
+      end
+
+      @connection
     end
   end
 end

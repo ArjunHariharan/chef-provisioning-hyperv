@@ -2,23 +2,42 @@ require 'chef/provisioning/driver'
 require 'chef/provisioning/machine/windows_machine'
 require 'chef/provisioning/machine/unix_machine'
 require 'chef/provisioning/transport/winrm'
-require 'chef/provisioning/transport/ssh_transport'
+require 'chef/provisioning/transport/ssh'
 require 'chef/provisioning/convergence_strategy/install_cached'
 require 'chef/provisioning/hyperv_driver/version'
 require 'hyperv/hyperv_api'
+require 'uri'
 
 class Chef
   module Provisioning
     module HyperVDriver
       class Driver < Chef::Provisioning::Driver
 
-        def self.from_url(url, config)
+        # The format for driver url is hyperv:<hyperv host url>
+        # Ex- hyperv:https://10.10.121.20:8080
+        def self.canonicalize_url(driver_url, config)
+          hyperv, hyperv_host = driver_url.split(':', 2)
+
+          # Validate URL
+          begin
+            hyperv_host = URI.parse(hyperv_host)
+            hyperv_host.to_s
+          rescue URI::InvalidURIError => e
+            Chef::Log.fatal(e.to_s)
+            raise URI::InvalidURIError
+          end
+        end
+
+        def self.from_url(driver_url, config)
           Driver.new(driver_url, config)
         end
 
-        def initialize(url, config)
+        def initialize(driver_url, config)
           super(driver_url, config)
-          @server = HyperV::Server.new
+          # Use the
+          hyerv_creds = hyperv_auth_credentials(config)
+          @server = HyperV::Server.new(
+            driver_url, hyerv_creds[:username], hyerv_creds[:password])
         end
 
         def allocate_machine(action_handler, machine_spec, machine_options)
@@ -30,7 +49,7 @@ class Chef
             # Check if the hyperv server exists.
             unless @server.valid_server?(driver_url, machine_spec.reference['server_id'])
               # Server doesn't exist
-              msg = 'Machine #{machine_spec.reference['server_id']} does not really exist.  Recreating ...'
+              msg = "Machine #{machine_spec.reference['server_id']} does not really exist.  Recreating ..."
               action_handler.perform_action msg do
                 machine_spec.reference = nil
               end
@@ -112,6 +131,15 @@ class Chef
 
         protected
 
+        def hyperv_auth_credentials(config)
+          unless config.configs[0][:driver_options][:compute_options][:usrname] &&
+            config.configs[0][:driver_options][:compute_options][:password]
+
+            raise ArgumentError.new('Usename or password missing.')
+          end
+
+          config.configs[0][:driver_options][:compute_options]
+        end
         # verify hyperv lwrp using Chef::Provision.inline_resource
         # Call from allocate_machine
         # def validate_resource(action_handler)
