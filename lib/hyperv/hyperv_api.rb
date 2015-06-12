@@ -8,37 +8,30 @@ class HyperV
       @password = password
     end
 
-    def valid_server?(server_name)
-
+    def valid_server?(_server_name)
     end
 
-    def create_server(vm_options = {})
+    def create_server(_vm_options = {})
       # Hyper-V API should return the server-id immediately.
       # Server create process can be strated in the background.
     end
 
-    def machine_status(server_id)
-
+    def machine_status(_server_id)
     end
 
-    def power_on(server_id)
-
+    def power_on(_server_id)
     end
 
-    def get_hostname(server_id)
-
+    def get_hostname(_server_id)
     end
 
-    def get_transport_type(server_id)
-
+    def get_transport_type(_server_id)
     end
 
-    def destroy_machine(server_id)
-
+    def destroy_machine(_server_id)
     end
 
-    def power_off(server_id)
-
+    def power_off(_server_id)
     end
 
     private
